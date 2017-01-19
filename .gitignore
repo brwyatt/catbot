@@ -91,5 +91,8 @@ ENV/
 # vim swp files
 .*.swp
 
+# Log dir
+/log/
+
 # Live settings file
 /settings.json
