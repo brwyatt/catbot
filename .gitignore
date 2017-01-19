@@ -87,3 +87,9 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# vim swp files
+.*.swp
+
+# Live settings file
+/settings.json
