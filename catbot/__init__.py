@@ -1,4 +1,5 @@
 import logging
+import logging.handlers
 import os
 import sys
 
@@ -43,7 +44,7 @@ class CatBot:
         if not os.path.isdir(logdir):
             logger.debug('Creating log directory %s' % (logdir,))
             os.makedirs(logdir)
-        fileHandler = logging.FileHandler(logfile)
+        fileHandler = logging.handlers.WatchedFileHandler(logfile)
         fileHandler.setFormatter(formatter)
         logger.addHandler(fileHandler)
         logger.debug('Filehandler added to logger')
