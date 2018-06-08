@@ -11,7 +11,7 @@ setup(
     license='GPLv3',
     keywords='irc bot',
     url='https://github.com/brwyatt/catbot',
-    packages=['catbot'],
+    packages=['catbot', 'catbot.plugins'],
     package_dir={'': 'src'},
     include_package_data=False,
     entry_points={
