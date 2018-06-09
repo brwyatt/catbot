@@ -35,4 +35,4 @@ class UserPrefs:
             }
         )
 
-        return resp['value']
+        return resp['Item'].get('value', 'unset')
