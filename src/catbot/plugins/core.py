@@ -16,5 +16,6 @@ class Core:
         bot.include('irc3.plugins.ctcp')  # Various handling for CTCP
         bot.include('irc3.plugins.uptime')  # !uptime
         bot.include('catbot.plugins.nickserv')  # NickServ identify
+        bot.include('catbot.plugins.greeter')  # Greet on join
 
         self.log.debug('Core plugins loaded!')
