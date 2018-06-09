@@ -33,11 +33,10 @@ class Greeter:
 
     @irc3.event(irc3.rfc.JOIN)
     def greet(self, mask, channel, **kwargs):
-        userprefs = UserPrefs(self.bot, mask.nick)
-
-        greeting = self.get_greeting(userprefs.get_pref('lang'))
-
         if mask.nick != self.bot.nick:
+            userprefs = UserPrefs(self.bot, mask.nick)
+            greeting = self.get_greeting(userprefs.get_pref('lang'))
+
             self.bot.privmsg(channel, greeting.format(name=mask.nick))
         else:
             self.bot.privmsg(channel, 'Mew! I\'m online and ready to help! '
