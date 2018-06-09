@@ -20,6 +20,7 @@ setup(
         ],
     },
     install_requires=[
+        'boto3==1.7.35',
         'irc3==1.0.3'
     ]
 )
