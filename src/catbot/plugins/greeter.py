@@ -3,7 +3,7 @@ import logging
 import irc3
 import boto3
 
-from catbot.user_prefs import UserPrefs
+from catbot.plugins.user_prefs import UserPrefs
 
 
 @irc3.plugin
@@ -34,8 +34,8 @@ class Greeter:
     @irc3.event(irc3.rfc.JOIN)
     def greet(self, mask, channel, **kwargs):
         if mask.nick != self.bot.nick:
-            userprefs = UserPrefs(self.bot, mask.nick)
-            greeting = self.get_greeting(userprefs.get_pref('lang'))
+            userprefs = UserPrefs(self.bot)
+            greeting = self.get_greeting(userprefs.get_pref(mask.nick, 'lang'))
 
             self.bot.privmsg(channel, greeting.format(name=mask.nick))
         else:

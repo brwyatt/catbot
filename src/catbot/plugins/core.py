@@ -17,5 +17,6 @@ class Core:
         bot.include('irc3.plugins.uptime')  # !uptime
         bot.include('catbot.plugins.nickserv')  # NickServ identify
         bot.include('catbot.plugins.greeter')  # Greet on join
+        bot.include('catbot.plugins.user_prefs')  # Set/get user preferences
 
         self.log.debug('Core plugins loaded!')
