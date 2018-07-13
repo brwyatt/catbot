@@ -7,53 +7,57 @@ from irc3.plugins.command import command
 
 
 @irc3.plugin
-class UserPrefs:
+class AdminPrefs:
     botoconfig = None
     config = None
     defaults = None
     log = None
     table = None
+    admin_key = None
 
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
 
-        if UserPrefs.config is None:
-            UserPrefs.config = bot.config.get(module, {})
+        if AdminPrefs.config is None:
+            AdminPrefs.config = bot.config.get(module, {})
 
-        if UserPrefs.defaults is None:
-            UserPrefs.defaults = bot.config.get('{0}.defaults'.format(module),
-                                                {})
-            if '#' in UserPrefs.defaults:
-                del UserPrefs.defaults['#']
-            if 'hash' in UserPrefs.defaults:
-                del UserPrefs.defaults['hash']
+        if AdminPrefs.defaults is None:
+            AdminPrefs.defaults = bot.config.get('{0}.defaults'.format(module),
+                                                 {})
+            if '#' in AdminPrefs.defaults:
+                del AdminPrefs.defaults['#']
+            if 'hash' in AdminPrefs.defaults:
+                del AdminPrefs.defaults['hash']
 
-        if UserPrefs.botoconfig is None:
-            UserPrefs.botoconfig = bot.config.get('boto', {})
+        if AdminPrefs.botoconfig is None:
+            AdminPrefs.botoconfig = bot.config.get('boto', {})
 
-        if UserPrefs.log is None:
-            UserPrefs.log = logging.getLogger('irc3.{0}'.format(module))
+        if AdminPrefs.log is None:
+            AdminPrefs.log = logging.getLogger('irc3.{0}'.format(module))
+
+        if AdminPrefs.admin_key is None:
+            AdminPrefs.admin_key = '*{0}'.format(bot.nick.lower())
 
         self.log.debug('Config: %r', self.config)
         self.log.debug('Defaults: %r', self.defaults)
 
-        if UserPrefs.table is None:
-            UserPrefs.table = boto3.resource(
+        if AdminPrefs.table is None:
+            AdminPrefs.table = boto3.resource(
                 'dynamodb',
                 aws_access_key_id=self.botoconfig.get('aws_access_key_id'),
                 aws_secret_access_key=self.botoconfig.get(
                     'aws_secret_access_key'),
                 region_name=self.botoconfig.get('region')
             ).Table(
-                '{0}User_Prefs'.format(UserPrefs.botoconfig.get(
+                '{0}User_Prefs'.format(AdminPrefs.botoconfig.get(
                     'dynamo_table_prefix', ''))
             )
 
-    def list_prefs(self, user):
+    def list_adminprefs(self):
         prefs = {x['pref']: x['value'] for x in
                  self.table.query(
-                    KeyConditionExpression=Key('user').eq(user.lower())
+                    KeyConditionExpression=Key('user').eq(self.admin_key)
                  )['Items']}
 
         user_pref_keys = set(prefs.keys())
@@ -65,27 +69,27 @@ class UserPrefs:
                                    self.defaults[x]) for x in
                 list(default_only) + list(prefs.keys())]
 
-    def unset_pref(self, user, pref):
+    def unset_adminpref(self, pref):
         return self.table.delete_item(
             Key={
-                'user': user.lower(),
+                'user': self.admin_key,
                 'pref': pref
             }
         )
 
-    def set_pref(self, user, pref, value):
+    def set_adminpref(self, pref, value):
         return self.table.put_item(
             Item={
-                'user': user.lower(),
+                'user': self.admin_key,
                 'pref': pref,
                 'value': value
             }
         )
 
-    def get_pref(self, user, pref):
+    def get_adminpref(self, pref):
         resp = self.table.get_item(
             Key={
-                'user': user.lower(),
+                'user': self.admin_key,
                 'pref': pref
             }
         )
@@ -93,20 +97,20 @@ class UserPrefs:
         return resp.get('Item', {}).get('value',
                                         self.defaults.get(pref, 'unset'))
 
-    @command(public=False)
-    def pref(self, mask, target, args):
-        """Set/get user preferences
+    @command(permission='admin', public=False, show_in_help_list=False)
+    def adminpref(self, mask, target, args):
+        """Set/get bot/admin preferences
 
-           %%pref get <key>
-           %%pref set <key> <value>...
-           %%pref unset <key>
-           %%pref list
+           %%adminpref get <key>
+           %%adminpref set <key> <value>...
+           %%adminpref unset <key>
+           %%adminpref list
         """
         if args['list']:
-            return self.list_prefs(mask.nick)
+            return self.list_adminprefs()
         elif args['set']:
-            self.set_pref(mask.nick, args['<key>'], ' '.join(args['<value>']))
+            self.set_adminpref(args['<key>'], ' '.join(args['<value>']))
         elif args['unset']:
-            self.unset_pref(mask.nick, args['<key>'])
+            self.unset_adminpref(args['<key>'])
 
-        return self.get_pref(mask.nick, args['<key>'])
+        return self.get_adminpref(args['<key>'])

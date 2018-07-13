@@ -15,6 +15,8 @@ class Core:
         bot.include('irc3.plugins.command')  # Configuration for !commands
         bot.include('irc3.plugins.ctcp')  # Various handling for CTCP
         bot.include('irc3.plugins.uptime')  # !uptime
+        # Set/get bot/admin preferences
+        bot.include('catbot.plugins.admin_prefs')
         bot.include('catbot.plugins.nickserv')  # NickServ identify
         bot.include('catbot.plugins.greeter')  # Greet on join
         bot.include('catbot.plugins.user_prefs')  # Set/get user preferences
