@@ -98,14 +98,14 @@ class UserPrefs:
         """Set/get user preferences
 
            %%pref get <key>
-           %%pref set <key> <value>
+           %%pref set <key> <value>...
            %%pref unset <key>
            %%pref list
         """
         if args['list']:
             return self.list_prefs(mask.nick)
         elif args['set']:
-            self.set_pref(mask.nick, args['<key>'], args['<value>'])
+            self.set_pref(mask.nick, args['<key>'], ' '.join(args['<value>']))
         elif args['unset']:
             self.unset_pref(mask.nick, args['<key>'])
 

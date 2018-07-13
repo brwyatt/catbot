@@ -102,14 +102,14 @@ class AdminPrefs:
         """Set/get bot/admin preferences
 
            %%adminpref get <key>
-           %%adminpref set <key> <value>
+           %%adminpref set <key> <value>...
            %%adminpref unset <key>
            %%adminpref list
         """
         if args['list']:
             return self.list_adminprefs()
         elif args['set']:
-            self.set_adminpref(args['<key>'], args['<value>'])
+            self.set_adminpref(args['<key>'], ' '.join(args['<value>']))
         elif args['unset']:
             self.unset_adminpref(args['<key>'])
 
