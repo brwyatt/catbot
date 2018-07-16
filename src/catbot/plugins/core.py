@@ -17,6 +17,7 @@ class Core:
         bot.include('irc3.plugins.uptime')  # !uptime
         # Set/get bot/admin preferences
         bot.include('catbot.plugins.admin_prefs')
+        bot.include('catbot.plugins.dice')  # Roll dice
         bot.include('catbot.plugins.nickserv')  # NickServ identify
         bot.include('catbot.plugins.greeter')  # Greet on join
         bot.include('catbot.plugins.user_prefs')  # Set/get user preferences
