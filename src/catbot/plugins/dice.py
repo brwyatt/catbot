@@ -57,6 +57,8 @@ class Dice:
 
         if count < 1:
             return 'ERROR: I have to roll SOMETHING!'
+        elif count > 1000000:
+            return 'I don\'t have that many dice to roll!'
 
         if sides < 2:
             return 'Error: Cannot roll something with less than 2 sides!'
