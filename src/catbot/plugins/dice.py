@@ -37,7 +37,7 @@ class Dice:
 
            %%roll
            %%roll <count>
-           %%roll <count>d<sides>
+           %%roll <count> <sides>
         """
 
         count = 1
