@@ -37,6 +37,16 @@ class Data:
                 region_name=botoconfig.get('region')
             ).Table(botoconfig['dynamo_table'])
 
+    def bustcache(self, prefs=False, strings=False, stats=False):
+        if prefs:
+            Data.prefs = {}
+
+        if strings:
+            Data.strings = {}
+
+        if stats:
+            Data.stats = {}
+
     def get_prefs(self, user, force_refresh=False):
         user = user.lower()
 
