@@ -1,32 +1,25 @@
 import logging
 
 import irc3
-import boto3
 
+from catbot.data import Data
 from catbot.plugins.user_prefs import UserPrefs
 
 
 @irc3.plugin
 class Greeter:
 
+    data = None
+
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
         self.config = config = bot.config.get(module, {})
-        self.botoconfig = botoconfig = bot.config.get('boto', {})
 
         self.log = logging.getLogger('irc3.{0}'.format(module))
         self.log.debug('Config: %r', config)
 
-        self.greetings = boto3.resource(
-            'dynamodb',
-            aws_access_key_id=botoconfig.get('aws_access_key_id'),
-            aws_secret_access_key=botoconfig.get('aws_secret_access_key'),
-            region_name=botoconfig.get('region')
-        ).Table(
-            '{0}User_Join_Greetings'.format(botoconfig.get(
-                'dynamo_table_prefix', ''))
-        )
+        self.data = Data(bot)
 
     def get_greeting(self, lang):
         return 'Hello, {name}!'

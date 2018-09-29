@@ -1,18 +1,17 @@
 import logging
 
-import boto3
-from boto3.dynamodb.conditions import Key
 import irc3
 from irc3.plugins.command import command
+
+from catbot.data import Data
 
 
 @irc3.plugin
 class UserPrefs:
-    botoconfig = None
     config = None
     defaults = None
     log = None
-    table = None
+    data = None
 
     def __init__(self, bot):
         self.bot = bot
@@ -29,32 +28,16 @@ class UserPrefs:
             if 'hash' in UserPrefs.defaults:
                 del UserPrefs.defaults['hash']
 
-        if UserPrefs.botoconfig is None:
-            UserPrefs.botoconfig = bot.config.get('boto', {})
-
         if UserPrefs.log is None:
             UserPrefs.log = logging.getLogger('irc3.{0}'.format(module))
 
         self.log.debug('Config: %r', self.config)
         self.log.debug('Defaults: %r', self.defaults)
 
-        if UserPrefs.table is None:
-            UserPrefs.table = boto3.resource(
-                'dynamodb',
-                aws_access_key_id=self.botoconfig.get('aws_access_key_id'),
-                aws_secret_access_key=self.botoconfig.get(
-                    'aws_secret_access_key'),
-                region_name=self.botoconfig.get('region')
-            ).Table(
-                '{0}User_Prefs'.format(UserPrefs.botoconfig.get(
-                    'dynamo_table_prefix', ''))
-            )
+        self.data = Data(bot)
 
     def list_prefs(self, user):
-        prefs = {x['pref']: x['value'] for x in
-                 self.table.query(
-                    KeyConditionExpression=Key('user').eq(user.lower())
-                 )['Items']}
+        prefs = self.data.get_prefs(user)
 
         user_pref_keys = set(prefs.keys())
         default_pref_keys = set(self.defaults.keys())
@@ -66,32 +49,16 @@ class UserPrefs:
                 list(default_only) + list(prefs.keys())]
 
     def unset_pref(self, user, pref):
-        return self.table.delete_item(
-            Key={
-                'user': user.lower(),
-                'pref': pref
-            }
-        )
+        return self.data.set_pref(user, pref, None)
 
     def set_pref(self, user, pref, value):
-        return self.table.put_item(
-            Item={
-                'user': user.lower(),
-                'pref': pref,
-                'value': value
-            }
-        )
+        return self.data.set_pref(user, pref, value)
 
     def get_pref(self, user, pref):
-        resp = self.table.get_item(
-            Key={
-                'user': user.lower(),
-                'pref': pref
-            }
-        )
+        pref = pref.lower()
+        resp = self.data.get_pref(user, pref)
 
-        return resp.get('Item', {}).get('value',
-                                        self.defaults.get(pref, 'unset'))
+        return resp if resp is not None else self.defaults.get(pref, 'unset')
 
     @command(public=False)
     def pref(self, mask, target, args):
