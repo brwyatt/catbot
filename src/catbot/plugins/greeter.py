@@ -36,13 +36,23 @@ class Greeter:
 
         return greeting
 
+    def get_botjoin(self):
+        lang = UserPrefs.defaults.get('lang', 'eng').lower()
+
+        greeting = self.data.get_string('botjoin', lang=lang)
+
+        if greeting is None:
+            greeting = 'Mew! I\'m online and ready to help! =^_^='
+
+        return greeting
+
     @irc3.event(irc3.rfc.JOIN)
     def greet(self, mask, channel, **kwargs):
         if mask.nick != self.bot.nick:
             userprefs = UserPrefs(self.bot)
             greeting = self.get_greeting(userprefs.get_pref(mask.nick, 'lang'))
         else:
-            greeting = 'Mew! I\'m online and ready to help! =^_^='
+            greeting = self.get_botjoin()
 
         self.bot.privmsg(channel, greeting.format(nick=mask.nick))
 
