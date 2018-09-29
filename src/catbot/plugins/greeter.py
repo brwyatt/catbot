@@ -66,4 +66,4 @@ class Greeter:
         userprefs = UserPrefs(self.bot)
         greeting = self.get_greeting(userprefs.get_pref(mask.nick, 'lang'))
 
-        self.bot.privmsg(target, greeting.format(nick=mask.nick))
+        return greeting.format(nick=mask.nick)
