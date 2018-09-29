@@ -2,9 +2,11 @@ import calendar
 import copy
 import json
 import logging
+from random import randint
 import time
 
 import boto3
+from boto3.dynamodb.conditions import Key
 
 
 def epoch_now():
@@ -15,6 +17,7 @@ class Data:
 
     table = None
     prefs = {}
+    strings = {}
     stats = {}
 
     def __init__(self, bot):
@@ -75,6 +78,50 @@ class Data:
         data = self.get_prefs(user, force_refresh=force_refresh)
 
         return data.get(pref, None)
+
+    def get_strings(self, string, lang='eng', force_refresh=False):
+        string = string.lower()
+        lang = lang.lower()
+        string_key = '*str.{0}.{1}'.format(string, lang)
+
+        self.log.info('Fetching string matching {0}'.format(string_key))
+        self.log.debug('force_refresh = {0}'.format(force_refresh))
+
+        if (string_key in Data.strings and
+                Data.strings[string_key]['retrieved'] +
+                Data.strings[string_key]['ttl'] > epoch_now() and
+                not force_refresh):
+            self.log.debug('String cache for {0} is valid!'.format(string_key))
+        else:
+            self.log.debug('String cache for {0} is invalid and will need to '
+                           'be retrieved!'.format(string_key))
+            data = [x['string'] for x in
+                    self.table.query(
+                        KeyConditionExpression=Key('user').eq(string_key)
+                    ).get('Items', [])]
+
+            Data.strings[string_key] = {
+                'retrieved': epoch_now(),
+                'ttl': 900,
+                'data': data
+            }
+
+        self.log.debug('{0} => {1}'.format(string_key, json.dumps(
+            Data.strings[string_key], indent=2, sort_keys=True)))
+        return Data.strings[string_key]['data']
+
+    def get_string(self, string, lang='eng', index=None, force_refresh=False):
+        string = string.lower()
+        lang = lang.lower()
+
+        data = self.get_strings(string, lang, force_refresh=force_refresh)
+
+        if len(data) > 0:
+            if type(index) is not int:
+                index = randint(0, len(data)-1)
+            return data[index]
+        else:
+            return None
 
     def set_pref(self, user, pref, value):
         user = user.lower()
