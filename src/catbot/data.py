@@ -1,12 +1,10 @@
 import calendar
-import copy
 import json
 import logging
 from random import randint
 import time
 
 import boto3
-from boto3.dynamodb.conditions import Key
 
 
 def epoch_now():
@@ -16,9 +14,7 @@ def epoch_now():
 class Data:
 
     table = None
-    prefs = {}
-    strings = {}
-    stats = {}
+    cache = {}
 
     default_namespaces = {
         'prefs': 'catbot.userdata',
@@ -42,55 +38,56 @@ class Data:
                 region_name=botoconfig.get('region')
             ).Table(botoconfig['dynamo_table'])
 
-    def bustcache(self, prefs=False, strings=False, stats=False):
-        if prefs:
-            Data.prefs = {}
+    def bustcache(self):
+        Data.cache = {}
 
-        if strings:
-            Data.strings = {}
+    def get(self, entity, item, ttl=120, force_refresh=False, default=None):
+        entity = entity.lower()
+        item = item.lower()
 
-        if stats:
-            Data.stats = {}
-
-    def get_prefs(self, user, namespace=default_namespaces['prefs'],
-                  force_refresh=False):
-        user = user.lower()
-        namespace = namespace.lower()
-        entity = '{0}/{1}'.format(namespace, user)
-
-        self.log.info('Getting user prefs for {0}'.format(user))
+        self.log.info('Retrieving {0} / {1}'.format(entity, item))
+        self.log.debug('ttl = {0}'.format(ttl))
         self.log.debug('force_refresh = {0}'.format(force_refresh))
-        self.log.debug('namespace = {0}'.format(namespace))
-        self.log.debug('entity = {0}'.format(entity))
 
-        if (user in Data.prefs and
-                Data.prefs[user]['retrieved'] + Data.prefs[user]['ttl'] >
-                epoch_now() and not force_refresh):
-            self.log.debug('Preference cache for {0} is valid!'.format(user))
+        if (entity in Data.cache and item in Data.cache[entity] and
+                Data.cache[entity][item].get('retrieved', 0) +
+                Data.cache[entity][item].get('ttl', 0) > epoch_now() and
+                not force_refresh):
+            self.log.debug('Cache for {0} / {1} is valid!'.format(entity, item))
         else:
-            self.log.debug('Preference cache for {0} is invalid and will '
-                           'need to be retrieved!'.format(user))
+            self.log.debug('Cache for {0} / {1} is invalid and will need to be '
+                           'retrieved!'.format(entity, item))
             data = self.table.get_item(
                 Key={
                     'entity': entity,
-                    'item': 'prefs'
+                    'item': item
                 }
-            ).get('Item', {}).get('value', {})
+            ).get('Item', {}).get('value', default)
 
-            Data.prefs[user] = {
+            if entity not in Data.cache:
+                Data.cache[entity] = {}
+
+            Data.cache[entity][item] = {
                 'retrieved': epoch_now(),
-                'ttl': 120,
+                'ttl': ttl,
                 'data': data
             }
 
-        self.log.debug('{0} => {1}'.format(user, json.dumps(
-            Data.prefs[user], indent=2, sort_keys=True)))
-        return Data.prefs[user]['data']
+        self.log.debug('{0} / {1} => {2}'.format(entity, item, json.dumps(
+            Data.cache[entity][item], indent=2, sort_keys=True)))
+        return Data.cache[entity][item]['data']
+
+    def get_prefs(self, user, namespace=default_namespaces['prefs'],
+                  force_refresh=False):
+        entity = '{0}/{1}'.format(namespace, user)
+
+        prefs = self.get(entity, 'prefs', ttl=120, force_refresh=force_refresh,
+                         default={})
+
+        return prefs
 
     def get_pref(self, user, pref, namespace=default_namespaces['prefs'],
                  force_refresh=False):
-        user = user.lower()
-        pref = pref.lower()
         data = self.get_prefs(user, namespace=namespace,
                               force_refresh=force_refresh)
 
@@ -99,51 +96,16 @@ class Data:
     def get_strings(self, string, lang='eng',
                     namespace=default_namespaces['strings'],
                     force_refresh=False):
-        string = string.lower()
-        lang = lang.lower()
-        namespace = namespace.lower()
         entity = '{0}/string:{1}'.format(namespace, string)
-        cache_key = '{0}/{1}'.format(entity, lang)
 
-        self.log.info('Fetching string matching {0}'.format(string))
-        self.log.debug('lang = {0}'.format(lang))
-        self.log.debug('namespace = {0}'.format(namespace))
-        self.log.debug('force_refresh = {0}'.format(force_refresh))
-        self.log.debug('entity = {0}'.format(entity))
-        self.log.debug('cache_key = {0}'.format(cache_key))
+        strings = self.get(entity, lang, ttl=900, force_refresh=force_refresh,
+                           default=[])
 
-        if (cache_key in Data.strings and
-                Data.strings[cache_key]['retrieved'] +
-                Data.strings[cache_key]['ttl'] > epoch_now() and
-                not force_refresh):
-            self.log.debug('String cache for {0} is valid!'.format(cache_key))
-        else:
-            self.log.debug('String cache for {0} is invalid and will need to '
-                           'be retrieved!'.format(cache_key))
-            data = self.table.get_item(
-                Key={
-                    'entity': entity,
-                    'item': lang
-                }
-            ).get('Item', {}).get('value', [])
-
-            Data.strings[cache_key] = {
-                'retrieved': epoch_now(),
-                'ttl': 900,
-                'data': data
-            }
-
-        self.log.debug('{0} => {1}'.format(cache_key, json.dumps(
-            Data.strings[cache_key], indent=2, sort_keys=True)))
-        return Data.strings[cache_key]['data']
+        return strings
 
     def get_string(self, string, lang='eng', index=None,
                    namespace=default_namespaces['strings'],
                    force_refresh=False):
-        string = string.lower()
-        lang = lang.lower()
-        namespace = namespace.lower()
-
         data = self.get_strings(string, lang, namespace=namespace,
                                 force_refresh=force_refresh)
 
@@ -154,16 +116,52 @@ class Data:
         else:
             return None
 
+    def set(self, entity, item, value):
+        entity = entity.lower()
+        item = item.lower()
+
+        self.log.info('Setting {0} / {1} => {2}'.format(
+            entity, item, json.dumps(value, indent=2, sort_keys=True)))
+
+        if entity not in Data.cache:
+            Data.cache[entity] = {}
+
+        if item in Data.cache[entity] and 'ttl' in Data.cache[entity][item]:
+            ttl = Data.cache[entity][item]['ttl']
+        else:
+            ttl = 120
+
+        Data.cache[entity][item] = {
+            'retrived': epoch_now(),
+            'ttl': ttl,
+            'data': value
+        }
+
+        if value is None:
+            self.log.debug('Value is "None", so deleting instead!')
+            self.table.delete_item(
+                Key={
+                    'entity': entity,
+                    'item': item
+                }
+            )
+        else:
+            self.table.put_item(
+                Item={
+                    'entity': entity,
+                    'item': item,
+                    'value': value,
+                }
+            )
+
+        return True
+
     def set_pref(self, user, pref, value,
                  namespace=default_namespaces['prefs']):
-        user = user.lower()
         pref = pref.lower()
-        namespace = namespace.lower()
         entity = '{0}/{1}'.format(namespace, user)
 
         self.log.info('Setting user pref {0} for {1}'.format(pref, user))
-        self.log.debug('namespace = {0}'.format(namespace))
-        self.log.debug('entity = {0}'.format(entity))
 
         data = self.get_prefs(user, namespace=namespace, force_refresh=True)
 
@@ -173,15 +171,4 @@ class Data:
             if pref in data:
                 del data[pref]
 
-        Data.prefs[user]['data'] = copy.deepcopy(data)
-
-        data = {'value': data}
-
-        data['entity'] = entity
-        data['item'] = 'prefs'
-
-        self.table.put_item(
-            Item=data
-        )
-
-        return True
+        return self.set(entity, 'prefs', data)
