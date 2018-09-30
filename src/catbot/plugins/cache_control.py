@@ -10,12 +10,8 @@ class CacheControl(Plugin):
     def bustcache(self, mask, target, args):
         """Bust cached data
 
-           %%bustcache all
-           %%bustcache <cache_set>
+           %%bustcache
         """
 
-        if args['all']:
-            self.data.bustcache(prefs=True, strings=True, stats=True)
-            return 'Cache cleared'
-        else:
-            return '¯\_(ツ)_/¯'
+        self.data.bustcache()
+        return 'Cache cleared'
