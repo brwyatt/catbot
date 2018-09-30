@@ -1,21 +1,13 @@
 # -*- coding: utf-8 -*-
-import logging
 import re
 
 import irc3
 
+from catbot.plugin import Plugin
+
 
 @irc3.plugin
-class NickServ:
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.module = module = self.__class__.__module__
-        self.config = config = bot.config.get(module, {})
-
-        self.log = logging.getLogger('irc3.{0}'.format(module))
-        self.log.debug('Config: %r', config)
-
+class NickServ(Plugin):
     def _check_mask(self, mask):
         if re.match('^{0}$'.format(self.config.get(
                 'mask', 'NickServ!NickServ@service.*')), mask):

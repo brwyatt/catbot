@@ -1,29 +1,19 @@
-import logging
-
 import irc3
 from irc3.plugins.command import command
 
-from catbot.data import Data
+from catbot.plugin import Plugin
 from catbot.plugins.user_prefs import UserPrefs
 
 
 @irc3.plugin
-class Greeter:
-
+class Greeter(Plugin):
     userprefs = None
 
     def __init__(self, bot):
-        self.bot = bot
-        self.module = module = self.__class__.__module__
-        self.config = config = bot.config.get(module, {})
+        super().__init__(bot)
 
         if Greeter.userprefs is None:
             Greeter.userprefs = UserPrefs(bot)
-
-        self.log = logging.getLogger('irc3.{0}'.format(module))
-        self.log.debug('Config: %r', config)
-
-        self.data = Data(bot)
 
     def get_greeting(self, lang):
         lang = lang.lower()
@@ -55,8 +45,8 @@ class Greeter:
     @irc3.event(irc3.rfc.JOIN)
     def greet(self, mask, channel, **kwargs):
         if mask.nick != self.bot.nick:
-            userprefs = UserPrefs(self.bot)
-            greeting = self.get_greeting(userprefs.get_pref(mask.nick, 'lang'))
+            greeting = self.get_greeting(
+                self.userprefs.get_pref(mask.nick, 'lang'))
         else:
             greeting = self.get_botjoin()
 
@@ -69,7 +59,7 @@ class Greeter:
            %%greetme
         """
 
-        userprefs = UserPrefs(self.bot)
-        greeting = self.get_greeting(userprefs.get_pref(mask.nick, 'lang'))
+        greeting = self.get_greeting(
+            self.userprefs.get_pref(mask.nick, 'lang'))
 
         return greeting.format(nick=mask.nick)

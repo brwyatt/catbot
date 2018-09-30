@@ -1,36 +1,13 @@
-import logging
 import random
 
 import irc3
 from irc3.plugins.command import command
 
+from catbot.plugin import Plugin
+
 
 @irc3.plugin
-class Dice:
-    config = None
-    defaults = None
-    log = None
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.module = module = self.__class__.__module__
-
-        if Dice.config is None:
-            Dice.config = bot.config.get(module, {})
-
-        if Dice.defaults is None:
-            Dice.defaults = bot.config.get('{0}.defaults'.format(module), {})
-            if '#' in Dice.defaults:
-                del Dice.defaults['#']
-            if 'hash' in Dice.defaults:
-                del Dice.defaults['hash']
-
-        if Dice.log is None:
-            Dice.log = logging.getLogger('irc3.{0}'.format(module))
-
-        self.log.debug('Config: %r', self.config)
-        self.log.debug('Defaults: %r', self.defaults)
-
+class Dice(Plugin):
     @command()
     def roll(self, mask, target, args):
         """Roll dice

@@ -1,15 +1,13 @@
-import logging
-
 import irc3
+
+from catbot.plugin import Plugin
 
 
 @irc3.plugin
-class Core:
+class Core(Plugin):
     def __init__(self, bot):
-        self.bot = bot
-        self.module = module = self.__class__.__module__
+        super().__init__(bot)
 
-        self.log = logging.getLogger('irc3.{0}'.format(module))
         self.log.debug('Loading Core plugins')
 
         bot.include('irc3.plugins.command')  # Configuration for !commands
