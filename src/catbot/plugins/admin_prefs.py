@@ -8,40 +8,31 @@ from catbot.data import Data
 
 @irc3.plugin
 class AdminPrefs:
-    config = None
-    defaults = None
     log = None
-    admin_key = None
-    data = None
 
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
 
-        if AdminPrefs.config is None:
-            AdminPrefs.config = bot.config.get(module, {})
-
-        if AdminPrefs.defaults is None:
-            AdminPrefs.defaults = bot.config.get('{0}.defaults'.format(module),
-                                                 {})
-            if '#' in AdminPrefs.defaults:
-                del AdminPrefs.defaults['#']
-            if 'hash' in AdminPrefs.defaults:
-                del AdminPrefs.defaults['hash']
+        self.data = Data(bot)
 
         if AdminPrefs.log is None:
             AdminPrefs.log = logging.getLogger('irc3.{0}'.format(module))
 
-        if AdminPrefs.admin_key is None:
-            AdminPrefs.admin_key = '*{0}'.format(bot.nick.lower())
-
         self.log.debug('Config: %r', self.config)
         self.log.debug('Defaults: %r', self.defaults)
 
-        self.data = Data(bot)
+    @property
+    def config(self):
+        return self.data.get(self.module, 'config', ttl=1800, default={})
+
+    @property
+    def defaults(self):
+        return self.data.get(self.module, 'defaults', ttl=900, default={})
 
     def list_adminprefs(self):
-        prefs = self.data.get_prefs(self.admin_key)
+        prefs = self.data.get_prefs(self.bot.nick.lower(),
+                                    namespace='catbot.admindata')
 
         user_pref_keys = set(prefs.keys())
         default_pref_keys = set(self.defaults.keys())
@@ -53,14 +44,17 @@ class AdminPrefs:
                 list(default_only) + list(prefs.keys())]
 
     def unset_adminpref(self, pref):
-        return self.data.set_pref(self.admin_key, pref, None)
+        return self.data.set_pref(self.bot.nick.lower(), pref, None,
+                                  namespace='catbot.admindata')
 
     def set_adminpref(self, pref, value):
-        return self.data.set_pref(self.admin_key, pref, value)
+        return self.data.set_pref(self.bot.nick.lower(), pref, value,
+                                  namespace='catbot.admindata')
 
     def get_adminpref(self, pref):
         pref = pref.lower()
-        resp = self.data.get_pref(self.admin_key, pref)
+        resp = self.data.get_pref(self.bot.nick.lower(), pref,
+                                  namespace='catbot.admindata')
 
         return resp if resp is not None else self.defaults.get(pref, 'unset')
 

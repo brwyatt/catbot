@@ -10,12 +10,15 @@ from catbot.plugins.user_prefs import UserPrefs
 @irc3.plugin
 class Greeter:
 
-    data = None
+    userprefs = None
 
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
         self.config = config = bot.config.get(module, {})
+
+        if Greeter.userprefs is None:
+            Greeter.userprefs = UserPrefs(bot)
 
         self.log = logging.getLogger('irc3.{0}'.format(module))
         self.log.debug('Config: %r', config)
@@ -24,7 +27,7 @@ class Greeter:
 
     def get_greeting(self, lang):
         lang = lang.lower()
-        default_lang = UserPrefs.defaults.get('lang', 'eng').lower()
+        default_lang = self.userprefs.defaults.get('lang', 'eng').lower()
 
         greeting = self.data.get_string('greeting', lang=lang,
                                         namespace=self.module)
@@ -39,7 +42,7 @@ class Greeter:
         return greeting
 
     def get_botjoin(self):
-        lang = UserPrefs.defaults.get('lang', 'eng').lower()
+        lang = self.userprefs.defaults.get('lang', 'eng').lower()
 
         greeting = self.data.get_string('botjoin', lang=lang,
                                         namespace=self.module)

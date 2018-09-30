@@ -8,25 +8,13 @@ from catbot.data import Data
 
 @irc3.plugin
 class UserPrefs:
-    config = None
-    defaults = None
     log = None
-    data = None
 
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
 
-        if UserPrefs.config is None:
-            UserPrefs.config = bot.config.get(module, {})
-
-        if UserPrefs.defaults is None:
-            UserPrefs.defaults = bot.config.get('{0}.defaults'.format(module),
-                                                {})
-            if '#' in UserPrefs.defaults:
-                del UserPrefs.defaults['#']
-            if 'hash' in UserPrefs.defaults:
-                del UserPrefs.defaults['hash']
+        self.data = Data(bot)
 
         if UserPrefs.log is None:
             UserPrefs.log = logging.getLogger('irc3.{0}'.format(module))
@@ -34,7 +22,13 @@ class UserPrefs:
         self.log.debug('Config: %r', self.config)
         self.log.debug('Defaults: %r', self.defaults)
 
-        self.data = Data(bot)
+    @property
+    def config(self):
+        return self.data.get(self.module, 'config', ttl=1800, default={})
+
+    @property
+    def defaults(self):
+        return self.data.get(self.module, 'defaults', ttl=900, default={})
 
     def list_prefs(self, user):
         prefs = self.data.get_prefs(user)
