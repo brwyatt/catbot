@@ -20,6 +20,11 @@ class Data:
     strings = {}
     stats = {}
 
+    default_namespaces = {
+        'prefs': 'catbot.userdata',
+        'strings': 'catbot.default'
+    }
+
     def __init__(self, bot):
         self.bot = bot
         self.module = module = self.__class__.__module__
@@ -47,11 +52,16 @@ class Data:
         if stats:
             Data.stats = {}
 
-    def get_prefs(self, user, force_refresh=False):
+    def get_prefs(self, user, namespace=default_namespaces['prefs'],
+                  force_refresh=False):
         user = user.lower()
+        namespace = namespace.lower()
+        entity = '{0}/{1}'.format(namespace, user)
 
         self.log.info('Getting user prefs for {0}'.format(user))
         self.log.debug('force_refresh = {0}'.format(force_refresh))
+        self.log.debug('namespace = {0}'.format(namespace))
+        self.log.debug('entity = {0}'.format(entity))
 
         if (user in Data.prefs and
                 Data.prefs[user]['retrieved'] + Data.prefs[user]['ttl'] >
@@ -62,15 +72,10 @@ class Data:
                            'need to be retrieved!'.format(user))
             data = self.table.get_item(
                 Key={
-                    'user': user,
-                    'key': 'prefs'
+                    'entity': entity,
+                    'item': 'prefs'
                 }
-            ).get('Item', {})
-
-            if 'user' in data:
-                del data['user']
-            if 'key' in data:
-                del data['key']
+            ).get('Item', {}).get('value', {})
 
             Data.prefs[user] = {
                 'retrieved': epoch_now(),
@@ -82,49 +87,65 @@ class Data:
             Data.prefs[user], indent=2, sort_keys=True)))
         return Data.prefs[user]['data']
 
-    def get_pref(self, user, pref, force_refresh=False):
+    def get_pref(self, user, pref, namespace=default_namespaces['prefs'],
+                 force_refresh=False):
         user = user.lower()
         pref = pref.lower()
-        data = self.get_prefs(user, force_refresh=force_refresh)
+        data = self.get_prefs(user, namespace=namespace,
+                              force_refresh=force_refresh)
 
         return data.get(pref, None)
 
-    def get_strings(self, string, lang='eng', force_refresh=False):
+    def get_strings(self, string, lang='eng',
+                    namespace=default_namespaces['strings'],
+                    force_refresh=False):
         string = string.lower()
         lang = lang.lower()
-        string_key = '*str.{0}.{1}'.format(string, lang)
+        namespace = namespace.lower()
+        entity = '{0}/string:{1}'.format(namespace, string)
+        cache_key = '{0}/{1}'.format(entity, lang)
 
-        self.log.info('Fetching string matching {0}'.format(string_key))
+        self.log.info('Fetching string matching {0}'.format(string))
+        self.log.debug('lang = {0}'.format(lang))
+        self.log.debug('namespace = {0}'.format(namespace))
         self.log.debug('force_refresh = {0}'.format(force_refresh))
+        self.log.debug('entity = {0}'.format(entity))
+        self.log.debug('cache_key = {0}'.format(cache_key))
 
-        if (string_key in Data.strings and
-                Data.strings[string_key]['retrieved'] +
-                Data.strings[string_key]['ttl'] > epoch_now() and
+        if (cache_key in Data.strings and
+                Data.strings[cache_key]['retrieved'] +
+                Data.strings[cache_key]['ttl'] > epoch_now() and
                 not force_refresh):
-            self.log.debug('String cache for {0} is valid!'.format(string_key))
+            self.log.debug('String cache for {0} is valid!'.format(cache_key))
         else:
             self.log.debug('String cache for {0} is invalid and will need to '
-                           'be retrieved!'.format(string_key))
-            data = [x['string'] for x in
-                    self.table.query(
-                        KeyConditionExpression=Key('user').eq(string_key)
-                    ).get('Items', [])]
+                           'be retrieved!'.format(cache_key))
+            data = self.table.get_item(
+                Key={
+                    'entity': entity,
+                    'item': lang
+                }
+            ).get('Item', {}).get('value', [])
 
-            Data.strings[string_key] = {
+            Data.strings[cache_key] = {
                 'retrieved': epoch_now(),
                 'ttl': 900,
                 'data': data
             }
 
-        self.log.debug('{0} => {1}'.format(string_key, json.dumps(
-            Data.strings[string_key], indent=2, sort_keys=True)))
-        return Data.strings[string_key]['data']
+        self.log.debug('{0} => {1}'.format(cache_key, json.dumps(
+            Data.strings[cache_key], indent=2, sort_keys=True)))
+        return Data.strings[cache_key]['data']
 
-    def get_string(self, string, lang='eng', index=None, force_refresh=False):
+    def get_string(self, string, lang='eng', index=None,
+                   namespace=default_namespaces['strings'],
+                   force_refresh=False):
         string = string.lower()
         lang = lang.lower()
+        namespace = namespace.lower()
 
-        data = self.get_strings(string, lang, force_refresh=force_refresh)
+        data = self.get_strings(string, lang, namespace=namespace,
+                                force_refresh=force_refresh)
 
         if len(data) > 0:
             if type(index) is not int:
@@ -133,11 +154,18 @@ class Data:
         else:
             return None
 
-    def set_pref(self, user, pref, value):
+    def set_pref(self, user, pref, value,
+                 namespace=default_namespaces['prefs']):
         user = user.lower()
         pref = pref.lower()
+        namespace = namespace.lower()
+        entity = '{0}/{1}'.format(namespace, user)
 
-        data = self.get_prefs(user, force_refresh=True)
+        self.log.info('Setting user pref {0} for {1}'.format(pref, user))
+        self.log.debug('namespace = {0}'.format(namespace))
+        self.log.debug('entity = {0}'.format(entity))
+
+        data = self.get_prefs(user, namespace=namespace, force_refresh=True)
 
         if value is not None:
             data[pref] = value
@@ -147,8 +175,10 @@ class Data:
 
         Data.prefs[user]['data'] = copy.deepcopy(data)
 
-        data['user'] = user
-        data['key'] = 'prefs'
+        data = {'value': data}
+
+        data['entity'] = entity
+        data['item'] = 'prefs'
 
         self.table.put_item(
             Item=data

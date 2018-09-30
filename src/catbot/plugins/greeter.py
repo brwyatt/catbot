@@ -26,10 +26,12 @@ class Greeter:
         lang = lang.lower()
         default_lang = UserPrefs.defaults.get('lang', 'eng').lower()
 
-        greeting = self.data.get_string('greeting', lang=lang)
+        greeting = self.data.get_string('greeting', lang=lang,
+                                        namespace=self.module)
 
         if greeting is None and lang != default_lang:
-            greeting = self.data.get_string('greeting', lang=default_lang)
+            greeting = self.data.get_string('greeting', lang=default_lang,
+                                            namespace=self.module)
 
         if greeting is None:
             greeting = 'Hello, {nick}!'
@@ -39,7 +41,8 @@ class Greeter:
     def get_botjoin(self):
         lang = UserPrefs.defaults.get('lang', 'eng').lower()
 
-        greeting = self.data.get_string('botjoin', lang=lang)
+        greeting = self.data.get_string('botjoin', lang=lang,
+                                        namespace=self.module)
 
         if greeting is None:
             greeting = 'Mew! I\'m online and ready to help! =^_^='
