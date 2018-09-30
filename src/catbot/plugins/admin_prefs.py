@@ -9,6 +9,7 @@ from catbot.data import Data
 @irc3.plugin
 class AdminPrefs:
     log = None
+    namespace = 'catbot.admindata'
 
     def __init__(self, bot):
         self.bot = bot
@@ -32,7 +33,7 @@ class AdminPrefs:
 
     def list_adminprefs(self):
         prefs = self.data.get_prefs(self.bot.nick.lower(),
-                                    namespace='catbot.admindata')
+                                    namespace=self.namespace)
 
         user_pref_keys = set(prefs.keys())
         default_pref_keys = set(self.defaults.keys())
@@ -45,16 +46,16 @@ class AdminPrefs:
 
     def unset_adminpref(self, pref):
         return self.data.set_pref(self.bot.nick.lower(), pref, None,
-                                  namespace='catbot.admindata')
+                                  namespace=self.namespace)
 
     def set_adminpref(self, pref, value):
         return self.data.set_pref(self.bot.nick.lower(), pref, value,
-                                  namespace='catbot.admindata')
+                                  namespace=self.namespace)
 
     def get_adminpref(self, pref):
         pref = pref.lower()
         resp = self.data.get_pref(self.bot.nick.lower(), pref,
-                                  namespace='catbot.admindata')
+                                  namespace=self.namespace)
 
         return resp if resp is not None else self.defaults.get(pref, 'unset')
 
