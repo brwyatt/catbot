@@ -105,7 +105,7 @@ class Data:
 
     def get_string(self, string, lang='eng', index=None,
                    namespace=default_namespaces['strings'],
-                   force_refresh=False):
+                   force_refresh=False, default=None):
         data = self.get_strings(string, lang, namespace=namespace,
                                 force_refresh=force_refresh)
 
@@ -114,7 +114,7 @@ class Data:
                 index = randint(0, len(data)-1)
             return data[index]
         else:
-            return None
+            return default
 
     def set(self, entity, item, value):
         entity = entity.lower()
