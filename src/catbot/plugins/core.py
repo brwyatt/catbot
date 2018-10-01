@@ -16,6 +16,7 @@ class Core(Plugin):
         # Set/get bot/admin preferences
         bot.include('catbot.plugins.admin_prefs')
         bot.include('catbot.plugins.cache_control')  # Control local data cache
+        bot.include('catbot.plugins.chat_stats')  # User chat stats
         bot.include('catbot.plugins.dice')  # Roll dice
         bot.include('catbot.plugins.nickserv')  # NickServ identify
         bot.include('catbot.plugins.greeter')  # Greet on join
