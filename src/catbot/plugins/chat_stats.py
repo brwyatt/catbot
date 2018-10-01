@@ -16,9 +16,15 @@ class ChatStats(Plugin):
     def __init__(self, bot):
         super().__init__(bot)
 
+    def sanetize_nick(self, nick):
+        nick = nick.lower()
+        if nick[0] in ['~', '&', '@', '%', '+']:
+            nick = nick[1:]
+        return nick
+
     def update_stats(self, user, channel, add_kicks=0, add_messages=0,
                      add_time=True):
-        user = user.lower()
+        user = self.sanetize_nick(user)
         channel = channel.lower()
         entity = 'catbot.userdata/{0}'.format(user)
 
@@ -47,7 +53,7 @@ class ChatStats(Plugin):
         self.data.set(entity, 'stats', data)
 
     def start_timer(self, user, channel):
-        user = user.lower()
+        user = self.sanetize_nick(user)
         channel = channel.lower()
 
         self.update_stats(user, channel, add_time=False)
@@ -62,7 +68,7 @@ class ChatStats(Plugin):
             self.update_stats, user, channel)
 
     def stop_timer(self, user, channel, add_kicks=0):
-        user = user.lower()
+        user = self.sanetize_nick(user)
         channel = channel.lower()
 
         if (channel in self.userlist and user in self.userlist[channel]):
