@@ -1,4 +1,5 @@
 import calendar
+from decimal import Decimal
 import json
 import logging
 from random import randint
@@ -9,6 +10,12 @@ import boto3
 
 def epoch_now():
     return calendar.timegm(time.gmtime())
+
+
+def fix_dynamo_types(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
 
 
 class Data:
@@ -74,7 +81,8 @@ class Data:
             }
 
         self.log.debug('{0} / {1} => {2}'.format(entity, item, json.dumps(
-            Data.cache[entity][item], indent=2, sort_keys=True)))
+            Data.cache[entity][item], indent=2, sort_keys=True,
+            default=fix_dynamo_types)))
         return Data.cache[entity][item]['data']
 
     def get_prefs(self, user, namespace=default_namespaces['prefs'],
@@ -121,7 +129,8 @@ class Data:
         item = item.lower()
 
         self.log.info('Setting {0} / {1} => {2}'.format(
-            entity, item, json.dumps(value, indent=2, sort_keys=True)))
+            entity, item, json.dumps(value, indent=2, sort_keys=True,
+                                     default=fix_dynamo_types)))
 
         if entity not in Data.cache:
             Data.cache[entity] = {}
