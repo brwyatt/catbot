@@ -9,12 +9,18 @@ from catbot.plugin import Plugin
 
 @irc3.plugin
 class ChatStats(Plugin):
-    timer = 300
-    jitter = 30
     userlist = {}
 
     def __init__(self, bot):
         super().__init__(bot)
+
+    @property
+    def frequency(self):
+        return int(self.config.get('frequency', 300))
+
+    @property
+    def jitter(self):
+        return int(self.config.get('jitter', self.frequency/10))
 
     def sanetize_nick(self, nick):
         nick = nick.lower()
@@ -24,14 +30,15 @@ class ChatStats(Plugin):
 
     def update_stats(self, user, channel, add_kicks=0, add_messages=0,
                      add_time=True):
+        self.log.info('Running user stats updates for {0} in {1}'
+                      .format(user, channel))
+
         user = self.sanetize_nick(user)
         channel = channel.lower()
         entity = 'catbot.userdata/{0}'.format(user)
 
-        self.log.info('Running user stats updates for {0} in {1}'
-                      .format(user, channel))
-
-        data = self.data.get(entity, 'stats', ttl=(self.timer*2), default={})
+        data = self.data.get(entity, 'stats', ttl=(self.frequency*2),
+                             default={})
 
         now = epoch_now()
 
@@ -53,6 +60,9 @@ class ChatStats(Plugin):
         self.data.set(entity, 'stats', data)
 
     def start_timer(self, user, channel):
+        self.log.debug('Starting timer for {user} on {channel}.'
+                       .format(user=user, channel=channel))
+
         user = self.sanetize_nick(user)
         channel = channel.lower()
 
@@ -62,12 +72,18 @@ class ChatStats(Plugin):
             self.userlist[channel] = {}
 
         # Schedule with jitter
-        timer = self.timer + (randint(0, self.jitter*2) - self.jitter)
+        timer = self.frequency + (randint(0, self.jitter*2) - self.jitter)
+
+        self.log.debug('Scheduling update for {timer} seconds'
+                       .format(timer=timer))
 
         self.userlist[channel][user] = schedule.every(timer).seconds.do(
             self.update_stats, user, channel)
 
     def stop_timer(self, user, channel, add_kicks=0):
+        self.log.debug('Stopping timer for {user} on {channel}.'
+                       .format(user=user, channel=channel))
+
         user = self.sanetize_nick(user)
         channel = channel.lower()
 
@@ -81,6 +97,7 @@ class ChatStats(Plugin):
     def join(self, mask, channel, **kwargs):
         if mask.nick != self.bot.nick:
             self.start_timer(mask.nick, channel)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.KICK)
     def kick(self, mask, channel, **kwargs):
@@ -90,6 +107,7 @@ class ChatStats(Plugin):
             # We got kicked, stop all the timers for this channel
             for nick in [x for x in self.userlist[channel]]:
                 self.stop_timer(nick, channel)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.NEW_NICK)
     def new_nick(self, nick, new_nick, **kwargs):
@@ -99,6 +117,7 @@ class ChatStats(Plugin):
                             if nick.nick.lower() in self.userlist[x]]:
                 self.stop_timer(nick.nick, channel)
                 self.start_timer(new_nick, channel)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.PART)
     def part(self, mask, channel, **kwargs):
@@ -108,6 +127,7 @@ class ChatStats(Plugin):
             # We're the ones leaving, stop all the timers for this channel
             for nick in [x for x in self.userlist[channel]]:
                 self.stop_timer(nick, channel)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.PING)
     def ping(self, *args, **kwargs):
@@ -118,6 +138,7 @@ class ChatStats(Plugin):
         if mask.nick != self.bot.nick:
             if target.startswith('#'):  # Channels only!
                 self.update_stats(mask.nick, target, add_messages=1)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.QUIT)
     def quit(self, mask, **kwargs):
@@ -131,6 +152,7 @@ class ChatStats(Plugin):
             for channel in [x for x in self.userlist]:
                 for nick in [x for x in self.userlist[channel]]:
                     self.stop_timer(nick, channel)
+        schedule.run_pending()
 
     @irc3.event(irc3.rfc.RPL_NAMREPLY)
     def names(self, channel, data, **kwargs):
