@@ -11,7 +11,7 @@ class Plugin:
         self.bot = bot
         self.module = module = self.__class__.__module__
 
-        self.data = Data(bot)
+        self.data = Data.data()
 
         self.log = logging.getLogger('irc3.{0}'.format(module))
 

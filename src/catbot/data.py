@@ -19,7 +19,7 @@ def fix_dynamo_types(obj):
 
 
 class Data:
-
+    singleton = None
     table = None
     cache = {}
 
@@ -28,11 +28,8 @@ class Data:
         'strings': 'catbot.default'
     }
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, **config):
         self.module = module = self.__class__.__module__
-        self.config = config = bot.config.get(module, {})
-        self.botoconfig = botoconfig = bot.config.get('boto', {})
 
         self.log = logging.getLogger('irc3.{0}'.format(module))
         self.log.debug('Config: %r', config)
@@ -40,10 +37,10 @@ class Data:
         if Data.table is None:
             Data.table = boto3.resource(
                 'dynamodb',
-                aws_access_key_id=botoconfig.get('aws_access_key_id'),
-                aws_secret_access_key=botoconfig.get('aws_secret_access_key'),
-                region_name=botoconfig.get('region')
-            ).Table(botoconfig['dynamo_table'])
+                aws_access_key_id=config.get('aws_access_key_id'),
+                aws_secret_access_key=config.get('aws_secret_access_key'),
+                region_name=config.get('region')
+            ).Table(config['dynamo_table'])
 
     def bustcache(self):
         Data.cache = {}
@@ -181,3 +178,13 @@ class Data:
                 del data[pref]
 
         return self.set(entity, 'prefs', data)
+
+    @classmethod
+    def data(cls, config_file='./boto.json', force=False):
+        if cls.singleton is None or force:
+            with open(config_file) as f:
+                config = json.load(f)
+
+            cls.singleton = cls(**config)
+
+        return cls.singleton
