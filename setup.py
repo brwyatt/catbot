@@ -16,7 +16,7 @@ setup(
     include_package_data=False,
     entry_points={
         'console_scripts': [
-            'catbot = irc3:run'
+            'catbot = catbot:run'
         ],
     },
     install_requires=[

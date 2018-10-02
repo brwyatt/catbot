@@ -6,6 +6,7 @@ from random import randint
 import time
 
 import boto3
+from boto3.dynamodb.conditions import Key
 
 
 def epoch_now():
@@ -81,6 +82,31 @@ class Data:
             Data.cache[entity][item], indent=2, sort_keys=True,
             default=fix_dynamo_types)))
         return Data.cache[entity][item]['data']
+
+    def get_config(self, entity=__name__, ttl=3600):
+        entity = entity.lower()
+
+        data = self.table.query(
+            KeyConditionExpression=Key('entity').eq(entity)
+        ).get('Items', [])
+
+        config = {}
+
+        if entity not in Data.cache:
+            Data.cache[entity] = {}
+
+        now = epoch_now()
+
+        for i in data:
+            Data.cache[entity][i['item']] = {
+                'retrieved': now,
+                'ttl': ttl,
+                'data': i.get('value', {})
+            }
+
+            config[i['item']] = i.get('value', {})
+
+        return config
 
     def get_prefs(self, user, namespace=default_namespaces['prefs'],
                   force_refresh=False):
