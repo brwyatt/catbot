@@ -100,3 +100,5 @@ ENV/
 # Test config file
 # Don't want to commit actual testing values!
 /config_test.ini
+/boto.json
+.irssi
