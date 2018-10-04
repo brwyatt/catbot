@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='catbot',
-    version='0.1.0',
+    version='0.2.0',
     author='Bryan Wyatt',
     author_email='brwyatt@gmail.com',
     description=('IRC bot'),
