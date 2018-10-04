@@ -7,7 +7,7 @@ from catbot.data import Data
 
 def run(argv=None):
     data = Data.data()
-    config = data.get_config(entity=__name__)
+    config = data.get_config()
 
     config.update(config.pop('bot'))
 

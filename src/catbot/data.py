@@ -83,7 +83,7 @@ class Data:
             default=fix_dynamo_types)))
         return Data.cache[entity][item]['data']
 
-    def get_config(self, entity=__name__, ttl=3600):
+    def get_config(self, entity='config', ttl=3600):
         entity = entity.lower()
 
         data = self.table.query(
